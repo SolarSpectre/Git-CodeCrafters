@@ -1,10 +1,21 @@
 const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib")
-
+const crypto = require("node:crypto")
 //constants
 const command = process.argv[2];
 const argument = process.argv[4];
+//Create a blob object
+async function createObject(file){
+    let stats = fs.statSync(file);
+    let size = stats.size;
+    const fileContent = await fs.readFileSync(file);
+    const blob = `blob ${size}\0${fileContent.toString()}`;
+    const hash =crypto.createHash('sha1').update(blob).digest('hex');
+    fs.mkdirSync(path.join(process.cwd(), ".git", "objects" ,hash.substring(0,2)), { recursive: true });
+    fs.writeFileSync(path.join(process.cwd(), ".git", "objects", hash.substring(0, 2), hash.substring(2)),zlib.deflateSync(blob));
+    process.stdout.write(hash);
+}
 
 //Read Blob Object
 async function catFile(hash){
@@ -29,6 +40,9 @@ function checkCommand(command){
         break;
     case "cat-file":
         catFile(argument);
+        break;
+    case "hash-object":
+        createObject(argument);
         break;
     default:
         throw new Error(`Unknown command ${command}`);
